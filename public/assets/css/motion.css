@@ -1,0 +1,801 @@
+/* =================================================================
+   FileGenie — Premium 3D Motion System
+   -----------------------------------------------------------------
+   Central, declarative motion layer. Decorative only: every animated
+   element is aria-hidden, never enters tab order, and never loads a
+   tool-processing engine. All motion uses transform / opacity to stay
+   GPU-cheap. Visibility + reduced-motion + device modes are honoured
+   by motion.js (which pauses offscreen animation) and by the rules
+   at the bottom of this file.
+   ================================================================= */
+
+/* ---------- 1. Depth & motion tokens ---------- */
+:root {
+    --depth-0: 0;
+    --depth-1: 1;
+    --depth-2: 2;
+    --depth-3: 3;
+    --depth-4: 4;
+
+    --ease-spring: cubic-bezier(.22, 1, .36, 1);
+    --ease-soft:   cubic-bezier(.4, .14, .3, 1);
+    --ease-snap:   cubic-bezier(.34, 1.56, .64, 1);
+
+    --m-glass: color-mix(in srgb, var(--surface) 72%, transparent);
+    --m-rail: color-mix(in srgb, var(--border) 60%, transparent);
+    --m-chip-radius: 16px;
+    --m-stage-perspective: 1100px;
+
+    --mx: 0;
+    --my: 0;
+}
+
+/* ---------- 2. 3D stage ---------- */
+.m-stage {
+    position: relative;
+    perspective: var(--m-stage-perspective);
+    perspective-origin: 50% 40%;
+    transform-style: preserve-3d;
+}
+.m-layer {
+    position: absolute;
+    inset: 0;
+    transform-style: preserve-3d;
+    pointer-events: none;
+    transform:
+        translate3d(var(--tx, 0), var(--ty, 0), var(--tz, 0))
+        rotateX(var(--rx, 0deg))
+        rotateY(var(--ry, 0deg))
+        translate3d(calc(var(--mx, 0) * var(--par, 0) * 10px), calc(var(--my, 0) * var(--par, 0) * 10px), 0);
+    will-change: transform;
+}
+
+/* ---------- 3. Hero 3D file cards (large, premium) ---------- */
+.m-card3d {
+    position: absolute;
+    transform-style: preserve-3d;
+    animation: mFloat var(--dur, 7s) var(--ease-spring) infinite var(--delay, 0s);
+    will-change: transform;
+    backface-visibility: hidden;
+    background: linear-gradient(145deg, var(--cz, var(--brand)), var(--cz2, var(--accent)));
+    border-radius: 14px;
+    box-shadow:
+        0 1px 1px rgba(0,0,0,.18),
+        0 12px 32px rgba(0,0,0,.2),
+        0 0 0 1px color-mix(in srgb, var(--cz, var(--brand)) 35%, transparent);
+    display: grid;
+    place-items: center;
+    color: #fff;
+}
+.m-card3d::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: linear-gradient(135deg, var(--cz, var(--brand)), var(--cz2, var(--accent)));
+    opacity: .12;
+    pointer-events: none;
+}
+.m-c3d-ic { width: 34%; height: 34%; color: currentColor; filter: drop-shadow(0 1px 2px rgba(0,0,0,.3)); }
+.m-c3d-lb {
+    position: absolute;
+    bottom: 6px;
+    left: 0;
+    right: 0;
+    text-align: center;
+    font-weight: 800;
+    font-size: .62rem;
+    color: #fff;
+    text-shadow: 0 1px 3px rgba(0,0,0,.4);
+    letter-spacing: .03em;
+}
+
+/* Depth layer containers */
+.m-card-layer { position: absolute; inset: 0; transform-style: preserve-3d; pointer-events: none; }
+.m-layer-back  { --par: 1; }
+.m-layer-mid   { --par: 2; }
+.m-layer-front { --par: 3.2; }
+
+@keyframes mFloat {
+    0%, 100% { transform: translate(-50%, -50%) translateY(0) translateZ(var(--tz, 0)) rotateX(var(--rx, 0)) rotateY(var(--ry, 0)); }
+    50%      { transform: translate(-50%, -50%) translateY(var(--amp, -12px)) translateZ(calc(var(--tz, 0) + 16px)) rotateX(calc(var(--rx, 0) + 1deg)) rotateY(calc(var(--ry, 0) - 1deg)); }
+}
+
+/* ---------- 4. Merge PDF scene ---------- */
+.m-merge-wrap { position: absolute; inset: 0; transform-style: preserve-3d; }
+.m-merge-pg {
+    position: absolute;
+    transform: translate(-50%, -50%) translateZ(var(--tz, 0)) rotateY(var(--ry, 0));
+    width: 28%;
+    height: 62%;
+    background: linear-gradient(160deg, #fff, var(--surface));
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-md);
+    animation: mMerge var(--dur, 10s) ease-in-out infinite var(--delay, 0s);
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 10px 10px 8px;
+}
+.m-pg-bar {
+    height: 7px;
+    border-radius: 5px;
+    background: var(--border);
+    width: var(--w, 50%);
+    animation: mPgBar .9s ease-out backwards;
+    animation-delay: calc(var(--d, 0) + 1.5s);
+}
+.m-pg-badge {
+    position: absolute;
+    top: 5px;
+    right: 6px;
+    background: var(--brand);
+    color: #fff;
+    font-size: .5rem;
+    padding: 1px 5px;
+    border-radius: 5px;
+    font-weight: 800;
+}
+@keyframes mMerge {
+    0%, 100% { transform: translate(-50%, -50%) translateZ(var(--tz, 0)) rotateY(var(--ry, 0)); }
+    35%      { transform: translate(-50%, -50%) translateZ(60px) rotateY(0deg); }
+    50%      { transform: translate(-50%, -50%) translateZ(70px) rotateY(0deg); }
+    65%      { transform: translate(-50%, -50%) translateZ(60px) rotateY(0deg); }
+}
+@keyframes mPgBar { from { transform: scaleX(0); opacity: 0; } to { transform: scaleX(1); opacity: 1; } }
+
+.m-merge-check {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--emerald);
+    display: grid;
+    place-items: center;
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(.3);
+    animation: mMergeCheck 10s ease-in-out infinite 5.5s;
+}
+.m-merge-ck {
+    color: #fff;
+    font-size: 1rem;
+    font-weight: 900;
+    animation: mCheck .5s var(--ease-snap) backwards;
+    animation-delay: 5.5s;
+}
+@keyframes mMergeCheck { 0%, 50% { opacity: 0; transform: translate(-50%, -50%) scale(.3); } 55%, 85% { opacity: 1; transform: translate(-50%, -50%) scale(1); } 100% { opacity: 0; transform: translate(-50%, -50%) scale(.3); } }
+
+/* ---------- 5. Background Remover scene ---------- */
+.m-bg-wrap { position: absolute; inset: 0; transform-style: preserve-3d; }
+.m-bg-checker {
+    position: absolute;
+    inset: 16%;
+    border-radius: 14px;
+    background-image:
+        linear-gradient(45deg, #c9ccd6 25%, transparent 25%),
+        linear-gradient(-45deg, #c9ccd6 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, #c9ccd6 75%),
+        linear-gradient(-45deg, transparent 75%, #c9ccd6 75%);
+    background-size: 18px 18px;
+    background-position: 0 0, 0 9px, 9px -9px, -9px 0;
+    opacity: .85;
+    animation: mBgIn 8s ease-in-out infinite;
+}
+.m-bg-card {
+    position: absolute;
+    inset: 18%;
+    border-radius: 14px;
+    background: linear-gradient(145deg, var(--brand), var(--accent));
+    box-shadow: 0 4px 20px rgba(0,0,0,.2);
+    display: grid;
+    place-items: center;
+    z-index: 2;
+    animation: mBgCard 8s ease-in-out infinite;
+}
+.m-bg-icon { width: 42%; height: 42%; color: #fff; filter: drop-shadow(0 1px 3px rgba(0,0,0,.3)); }
+.m-bg-mask {
+    position: absolute;
+    inset: 18%;
+    border-radius: 14px;
+    background: linear-gradient(145deg, var(--brand), var(--accent));
+    z-index: 1;
+    transform-origin: left center;
+    animation: mBgMask 8s ease-in-out infinite;
+}
+.m-bg-brackets {
+    position: absolute;
+    inset: 16%;
+    border-radius: 14px;
+    z-index: 3;
+    pointer-events: none;
+    opacity: 0;
+    animation: mBgBrackets 8s ease-in-out infinite;
+}
+.m-bg-brackets::before,
+.m-bg-brackets::after {
+    content: "";
+    position: absolute;
+    width: 18px;
+    height: 18px;
+    border-color: var(--emerald);
+    border-style: solid;
+    border-width: 0;
+}
+.m-bg-brackets::before { top: -2px; left: -2px; border-top-width: 3px; border-left-width: 3px; border-radius: 4px 0 0 0; }
+.m-bg-brackets::after  { bottom: -2px; right: -2px; border-bottom-width: 3px; border-right-width: 3px; border-radius: 0 0 4px 0; }
+
+@keyframes mBgIn       { 0%, 100% { opacity: .85; } 50% { opacity: 1; } }
+@keyframes mBgCard     { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.03); } }
+@keyframes mBgMask     { 0%, 40% { transform: scaleX(1); transform-origin: left center; } 50%, 90% { transform: scaleX(0); transform-origin: left center; } 100% { transform: scaleX(1); transform-origin: right center; } }
+@keyframes mBgBrackets { 0%, 35% { opacity: 0; } 40%, 85% { opacity: 1; } 100% { opacity: 0; } }
+
+/* ---------- 6. Barcode Scan scene ---------- */
+.m-bc-wrap { position: absolute; inset: 0; transform-style: preserve-3d; }
+.m-bc-card {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 52%;
+    height: 48%;
+    background: var(--surface);
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-md);
+    transform: translate(-50%, -50%) rotateY(var(--ry, 5deg));
+    animation: mFloat 9s var(--ease-spring) infinite;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px 14px;
+}
+.m-bc-bars {
+    display: flex;
+    align-items: flex-end;
+    gap: 2px;
+    height: 55%;
+    width: 100%;
+}
+.m-bc-bars span {
+    display: block;
+    background: var(--text);
+    border-radius: 1px;
+    animation: mBcBar .9s ease-out backwards;
+    animation-delay: calc(var(--d, 0) + .3s);
+}
+@keyframes mBcBar { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+
+.m-bc-num {
+    font-family: monospace;
+    font-size: .72rem;
+    font-weight: 700;
+    color: var(--text);
+    letter-spacing: .06em;
+    text-align: center;
+}
+.m-bc-corners {
+    position: absolute;
+    inset: 18%;
+    pointer-events: none;
+    opacity: 0;
+    animation: mBcCorners 9s ease-in-out infinite;
+}
+.m-bc-corners::before,
+.m-bc-corners::after {
+    content: "";
+    position: absolute;
+    width: 22px;
+    height: 22px;
+    border-color: var(--cyan);
+    border-style: solid;
+    border-width: 0;
+}
+.m-bc-corners::before { top: 0; left: 0; border-top-width: 2.5px; border-left-width: 2.5px; border-radius: 3px 0 0 0; }
+.m-bc-corners::after  { bottom: 0; right: 0; border-bottom-width: 2.5px; border-right-width: 2.5px; border-radius: 0 0 3px 0; }
+@keyframes mBcCorners { 0%, 15% { opacity: 0; } 20%, 80% { opacity: 1; } 100% { opacity: 0; } }
+
+.m-bc-beam {
+    position: absolute;
+    left: 12%;
+    right: 12%;
+    height: 3px;
+    background: linear-gradient(90deg, transparent, var(--cyan), transparent);
+    box-shadow: 0 0 16px 2px color-mix(in srgb, var(--cyan) 55%, transparent);
+    border-radius: 4px;
+    animation: mScan 3.4s var(--ease-soft) infinite;
+    top: 14%;
+}
+.m-bc-result {
+    position: absolute;
+    left: 50%;
+    bottom: 12%;
+    transform: translateX(-50%);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 5px 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    box-shadow: var(--shadow-md);
+    opacity: 0;
+    animation: mBcResult 9s ease-in-out infinite 5s;
+    white-space: nowrap;
+}
+.m-bc-res-type { font-size: .52rem; color: var(--text); opacity: .7; font-weight: 600; text-transform: uppercase; }
+.m-bc-res-val  { font-family: monospace; font-size: .68rem; font-weight: 800; color: var(--brand); }
+.m-bc-res-ok   {
+    width: 18px; height: 18px; border-radius: 50%;
+    background: var(--emerald); color: #fff;
+    display: grid; place-items: center;
+    font-size: .6rem; font-weight: 900;
+}
+@keyframes mBcResult { 0%, 50% { opacity: 0; transform: translateX(-50%) translateY(6px); } 55%, 85% { opacity: 1; transform: translateX(-50%) translateY(0); } 100% { opacity: 0; transform: translateX(-50%) translateY(-6px); } }
+
+/* ---------- 7. QR Builder scene ---------- */
+.m-qr-wrap { position: absolute; inset: 0; transform-style: preserve-3d; }
+.m-qr-card {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 54%;
+    height: 54%;
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: var(--shadow-lg), 0 0 0 1px var(--border);
+    transform: translate(-50%, -50%) rotateY(var(--ry, 3deg));
+    animation: mFloat 9s var(--ease-spring) infinite;
+    display: grid;
+    place-items: center;
+    padding: 10px;
+}
+.m-qr-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    grid-template-rows: repeat(7, 1fr);
+    gap: 3px;
+    width: 100%;
+    aspect-ratio: 1;
+}
+.m-qr-cell {
+    background: var(--text);
+    border-radius: 2px;
+    opacity: 0;
+    animation: mQrPop .5s var(--ease-snap) forwards;
+    animation-delay: calc(var(--d, 0) + .2s);
+}
+@keyframes mQrPop { from { opacity: 0; transform: scale(.3); } to { opacity: 1; transform: scale(1); } }
+
+.m-qr-dl {
+    position: absolute;
+    left: 50%;
+    bottom: 10%;
+    transform: translateX(-50%);
+    background: linear-gradient(135deg, var(--brand), var(--accent));
+    color: #fff;
+    padding: 4px 12px;
+    border-radius: 8px;
+    font-size: .68rem;
+    font-weight: 800;
+    box-shadow: var(--shadow-md);
+    opacity: 0;
+    animation: mQrDl 9s ease-in-out infinite 5.5s;
+    white-space: nowrap;
+}
+@keyframes mQrDl { 0%, 50% { opacity: 0; transform: translateX(-50%) translateY(8px); } 55%, 85% { opacity: 1; transform: translateX(-50%) translateY(0); } 100% { opacity: 0; transform: translateX(-50%) translateY(-6px); } }
+
+/* ---------- 8. Category compositions (premium 3D card style) ---------- */
+.m-pg3d {
+    position: absolute;
+    width: 22%;
+    height: 30%;
+    background: linear-gradient(160deg, #fff, var(--surface));
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-md);
+    animation: mFloat var(--dur, 7s) var(--ease-spring) infinite var(--delay, 0s);
+    transform: translate(-50%, -50%) translateZ(var(--tz, 0)) rotateY(var(--ry, 0));
+    backface-visibility: hidden;
+}
+.m-pg3d-badge {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    background: var(--brand);
+    color: #fff;
+    font-size: .5rem;
+    padding: 1px 5px;
+    border-radius: 5px;
+    font-weight: 800;
+}
+.m-frame3d {
+    position: absolute;
+    width: 18%;
+    height: 24%;
+    border-radius: 8px;
+    border: 3px solid #fff;
+    background: linear-gradient(160deg, var(--cz, var(--brand)), transparent);
+    box-shadow: var(--shadow-md);
+    animation: mFloat var(--dur, 7s) var(--ease-spring) infinite var(--delay, 0s);
+    transform: translate(-50%, -50%) translateZ(var(--tz, 0)) rotateY(var(--ry, 0));
+    backface-visibility: hidden;
+}
+.m-vtile3d {
+    position: absolute;
+    width: 34%;
+    height: 34%;
+    border-radius: 14px;
+    background: linear-gradient(160deg, var(--brand), var(--accent));
+    display: grid;
+    place-items: center;
+    box-shadow: var(--shadow-lg);
+    animation: mFloat 8s var(--ease-spring) infinite;
+    backface-visibility: hidden;
+}
+.m-vt3d-play { width: 34%; height: 34%; color: #fff; }
+.m-vbar3d {
+    position: absolute;
+    height: 8px;
+    border-radius: 6px;
+    background: var(--border);
+    overflow: hidden;
+    animation: mSlideFake 2.6s ease-in-out infinite;
+}
+.m-vbar3d::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    width: 40%;
+    background: linear-gradient(90deg, var(--cyan), var(--brand));
+    animation: mSlide 2.6s ease-in-out infinite;
+}
+.m-atile3d {
+    position: absolute;
+    width: 20%;
+    height: 30%;
+    border-radius: 12px;
+    background: linear-gradient(160deg, var(--cz, var(--brand)), transparent);
+    box-shadow: var(--shadow-md);
+    animation: mFloat var(--dur, 7s) var(--ease-spring) infinite var(--delay, 0s);
+    transform: translate(-50%, -50%) translateZ(var(--tz, 0)) rotateY(var(--ry, 0));
+    display: grid;
+    place-items: center;
+    backface-visibility: hidden;
+}
+.m-type3d {
+    position: absolute;
+    font-weight: 900;
+    color: var(--brand);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    width: 1.6em;
+    height: 1.6em;
+    display: grid;
+    place-items: center;
+    box-shadow: var(--shadow-md);
+    animation: mFloat var(--dur, 7s) var(--ease-spring) infinite var(--delay, 0s);
+    transform: translate(-50%, -50%) translateZ(var(--tz, 0)) rotateY(var(--ry, 0));
+    font-size: var(--sz, 1.6em);
+    backface-visibility: hidden;
+}
+.m-core3d {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 18%;
+    height: 18%;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--brand), var(--accent));
+    display: grid;
+    place-items: center;
+    box-shadow: var(--shadow-lg);
+    transform: translate(-50%, -50%);
+    backface-visibility: hidden;
+}
+.m-core3d span,
+.m-sat3d span { width: 60%; height: 60%; color: #fff; }
+.m-sat3d {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 10%;
+    height: 10%;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--cz, var(--brand)), var(--accent));
+    display: grid;
+    place-items: center;
+    box-shadow: var(--shadow-md);
+    animation: mSat3d var(--dur, 7s) var(--ease-spring) infinite var(--delay, 0s);
+    backface-visibility: hidden;
+}
+
+@keyframes mSat3d {
+    0%, 100% { transform: translate(-50%, -50%) translateX(calc(sin(var(--i, 0) * 90deg) * 28%)) translateY(calc(cos(var(--i, 0) * 90deg) * 28%)) translateZ(20px); }
+    50%      { transform: translate(-50%, -50%) translateX(calc(sin(var(--i, 0) * 90deg) * 28%)) translateY(calc(cos(var(--i, 0) * 90deg) * 28%)) translateZ(40px); }
+}
+@keyframes mSlideFake { 0%, 100% { transform: scaleX(1); } 50% { transform: scaleX(.6); } }
+
+/* ---------- 9. Misc tool scene elements (simplified) ---------- */
+.m-crop { position: absolute; left: 50%; top: 50%; width: 46%; height: 40%; transform: translate(-50%, -50%); border: 2px dashed var(--brand); border-radius: 6px; }
+.m-crop-h { position: absolute; width: 12px; height: 12px; border: 2px solid var(--brand); background: var(--surface); }
+.m-crop-h.tl { left: -6px; top: -6px; border-right: none; border-bottom: none; }
+.m-crop-h.tr { right: -6px; top: -6px; border-left: none; border-bottom: none; }
+.m-crop-h.bl { left: -6px; bottom: -6px; border-right: none; border-top: none; }
+.m-crop-h.br { right: -6px; bottom: -6px; border-left: none; border-top: none; }
+
+.m-meta { position: absolute; height: 8px; border-radius: 5px; background: var(--border); animation: mShrinkOut var(--dur, 4s) ease-in-out infinite var(--delay, 0s); }
+@keyframes mShrinkOut { 0%, 100% { opacity: .9; transform: scaleX(1); } 50% { opacity: .2; transform: scaleX(.4); } }
+
+.m-textline { position: absolute; height: 8px; border-radius: 5px; background: linear-gradient(90deg, var(--text), transparent); opacity: .7; animation: mScanLine 2.6s ease-in-out infinite; animation-delay: calc(var(--i, 0) * .25s); }
+@keyframes mScanLine { 0% { opacity: 0; transform: translateX(-20%); } 20% { opacity: .8; } 100% { opacity: 0; transform: translateX(20%); } }
+
+.m-mag { position: absolute; width: 34%; height: 34%; border-radius: 12px; background: var(--surface); border: 2px solid var(--border); display: grid; place-items: center; box-shadow: var(--shadow-md); animation: mFloat 7s var(--ease-spring) infinite; }
+.m-mag-ic { width: 60%; height: 60%; color: var(--brand); }
+.m-zoom { position: absolute; left: 66%; top: 30%; font-weight: 900; color: var(--brand); font-size: 1.1rem; animation: mPulse 2.4s ease-in-out infinite; }
+.m-txt-over { position: absolute; left: 6px; bottom: 4px; font-weight: 900; color: #fff; font-size: .9rem; text-shadow: 0 1px 2px rgba(0,0,0,.4); }
+
+.m-trimbar { position: absolute; height: 8px; border-radius: 6px; background: var(--border); overflow: hidden; }
+.m-trimbar::after { content: ""; position: absolute; inset: 0; width: 40%; background: linear-gradient(90deg, var(--cyan), var(--brand)); animation: mSlide 2.6s ease-in-out infinite; }
+.m-scissor { position: absolute; left: 50%; top: 48%; transform: translate(-50%, -50%); font-size: 1.5rem; color: var(--brand); font-weight: 800; animation: mFloat 5s var(--ease-spring) infinite; }
+
+.m-speaker { position: absolute; left: 42%; top: 50%; width: 14%; height: 22%; transform: translate(-50%, -50%); color: var(--text); }
+.m-mono-l, .m-mono-r { position: absolute; top: 50%; width: 22%; height: 30%; border-radius: 8px; background: var(--surface); border: 1px solid var(--border); box-shadow: var(--shadow-sm); }
+.m-mono-l { left: 24%; transform: translateY(-50%); animation: mFloat 6s var(--ease-spring) infinite; }
+.m-mono-r { left: 54%; transform: translateY(-50%); animation: mFloat 6.6s var(--ease-spring) infinite; }
+
+.m-vol { position: absolute; width: 8px; border-radius: 4px; background: linear-gradient(var(--cyan), var(--brand)); animation: mWave 1.6s ease-in-out infinite; animation-delay: calc(var(--i, 0) * .12s); transform-origin: bottom; }
+
+.m-swatch { position: absolute; width: 20%; height: 22%; border-radius: 10px; box-shadow: var(--shadow-md); animation: mFloat var(--dur, 6s) var(--ease-spring) infinite var(--delay, 0s); }
+
+.m-code { position: absolute; top: 42%; left: 18%; font-family: monospace; font-size: .7rem; color: var(--text); background: var(--surface); border: 1px solid var(--border); padding: 3px 7px; border-radius: 7px; animation: mFloat 6s var(--ease-spring) infinite; }
+.m-code:last-of-type { left: 54%; }
+.m-hash { position: absolute; top: 42%; left: 54%; font-family: monospace; font-weight: 800; font-size: .8rem; color: var(--brand); background: var(--surface); border: 1px solid var(--border); padding: 3px 7px; border-radius: 7px; }
+
+.m-shield { position: absolute; inset: 12%; display: grid; place-items: center; color: var(--emerald); }
+.m-shield svg { width: 46%; height: 46%; animation: mPulse 3s var(--ease-soft) infinite; }
+
+.m-checker { position: absolute; inset: 14%; border-radius: 12px; background-image: linear-gradient(45deg, #c9ccd6 25%, transparent 25%), linear-gradient(-45deg, #c9ccd6 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #c9ccd6 75%), linear-gradient(-45deg, transparent 75%, #c9ccd6 75%); background-size: 18px 18px; background-position: 0 0, 0 9px, 9px -9px, -9px 0; opacity: .9; }
+.m-subject { position: absolute; inset: 22%; border-radius: 14px; background: radial-gradient(circle at 40% 35%, var(--accent), var(--brand)); box-shadow: var(--shadow-md); }
+
+.m-globe { position: absolute; inset: 16%; border-radius: 50%; background: radial-gradient(circle at 35% 30%, color-mix(in srgb, var(--cyan) 70%, #fff), var(--brand) 70%); box-shadow: var(--shadow-lg), inset 0 0 30px rgba(0,0,0,.25); animation: mSpin 16s linear infinite; }
+.m-globe::after { content: ""; position: absolute; inset: 0; border-radius: 50%; border: 1.5px solid rgba(255,255,255,.35); background: repeating-linear-gradient(0deg, transparent 0 22%, rgba(255,255,255,.25) 22.5% 23%), repeating-linear-gradient(90deg, transparent 0 22%, rgba(255,255,255,.18) 22.5% 23%); }
+.m-lock { position: absolute; inset: 26%; display: grid; place-items: center; color: var(--text); animation: mPulse 3.4s var(--ease-soft) infinite; }
+.m-lock svg { width: 50%; height: 50%; }
+
+.m-font { position: absolute; top: 46%; left: 34%; transform: translateY(-50%); font-size: 1.8rem; font-weight: 900; color: var(--brand); animation: mFloat 6s var(--ease-spring) infinite; }
+.m-serif { font-family: Georgia, serif; }
+.m-script { font-family: "Brush Script MT", cursive; color: var(--accent); }
+
+.m-pw { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); display: flex; flex-direction: column; gap: 4px; animation: mFloat 7s var(--ease-spring) infinite; }
+.m-pw-chars { font-family: monospace; font-size: .8rem; font-weight: 800; color: var(--text); background: var(--surface); border: 1px solid var(--border); padding: 4px 8px; border-radius: 7px; letter-spacing: .04em; }
+.m-pw-str { font-size: .55rem; font-weight: 800; color: var(--emerald); text-transform: uppercase; text-align: center; }
+
+/* Card 3D modifiers */
+.m-c3d-shrink { animation: mC3dShrink 4s ease-in-out infinite; }
+@keyframes mC3dShrink { 0%, 100% { transform: translate(-50%, -50%) scale(1); } 50% { transform: translate(-50%, -50%) scale(.65); } }
+.m-c3d-spin { animation: mC3dSpin 6s linear infinite; }
+@keyframes mC3dSpin { to { transform: translate(-50%, -50%) rotate(360deg); } }
+.m-c3d-resize { animation: mC3dResize 4s ease-in-out infinite; }
+@keyframes mC3dResize { 0%, 100% { transform: translate(-50%, -50%); } 50% { transform: translate(-50%, -50%) scale(1.15); } }
+.m-c3d-round { border-radius: 50% !important; }
+.m-c3d-speed { animation: none; }
+
+/* ---------- 10. Scroll reveal utilities ---------- */
+[data-reveal] { will-change: opacity, transform; }
+html.motion-ready [data-reveal] {
+    opacity: 0;
+    transform: translateY(26px) scale(.985);
+    transition: opacity .7s var(--ease-soft), transform .7s var(--ease-soft);
+    transition-delay: var(--reveal-delay, 0s);
+}
+html.motion-ready [data-reveal="depth"] { transform: translateY(40px) translateZ(-40px) scale(.97); }
+html.motion-ready [data-reveal="rise"]   { transform: translateY(18px); }
+html.motion-ready [data-reveal="tilt"]   { transform: perspective(800px) rotateX(8deg) translateY(20px); }
+html.motion-ready [data-reveal="mask"]   { clip-path: inset(0 0 100% 0); transform: none; }
+html.motion-ready .is-revealed[data-reveal="mask"] { clip-path: inset(0 0 0 0); }
+html.motion-ready .is-revealed[data-reveal] {
+    opacity: 1; transform: none;
+    transition: opacity .7s var(--ease-soft), transform .7s var(--ease-soft), clip-path .9s var(--ease-soft);
+    transition-delay: var(--reveal-delay, 0s);
+}
+
+/* Stagger groups */
+.m-stagger > * { --reveal-delay: 0s; }
+
+/* ---------- 10b. Decorative scene containers (reserved dimensions) ---------- */
+.category-scene,
+.tool-motion-scene {
+    position: relative;
+    width: 100%;
+    height: 168px;
+    margin: 6px 0 22px;
+    border-radius: var(--radius-lg, 18px);
+    background:
+        radial-gradient(120% 120% at 50% -10%, color-mix(in srgb, var(--brand) 14%, transparent), transparent 60%),
+        var(--surface);
+    border: 1px solid var(--border);
+    overflow: hidden;
+}
+.tool-motion-scene { height: 150px; }
+@media (max-width: 640px) {
+    .category-scene, .tool-motion-scene { height: 132px; }
+}
+
+/* ---------- 10c. Pause offscreen animation ---------- */
+.m-stage.is-offscreen,
+.m-stage.is-offscreen * {
+    animation-play-state: paused !important;
+}
+
+/* ---------- 10d. Hero ecosystem container ---------- */
+.hero-ecosystem {
+    position: absolute; inset: 0;
+    transform-style: preserve-3d;
+    perspective: var(--m-stage-perspective);
+    perspective-origin: 50% 40%;
+}
+.hero-ecosystem .m-layer { transform-style: preserve-3d; }
+.hero-copy { position: relative; z-index: 2; }
+.hero-card { position: relative; z-index: 1; }
+.hero-card-glow { position: absolute; inset: 0; z-index: 0; pointer-events: none; }
+
+/* ---------- 11. Tool card hover (subtle 3D tilt) ---------- */
+.tool-card, .category-card {
+    position: relative;
+    transform-style: preserve-3d;
+    transition: transform .28s var(--ease-spring), box-shadow .28s var(--ease-soft), border-color .28s var(--ease-soft);
+}
+.tool-card .tool-icon,
+.category-card .category-icon {
+    transition: transform .28s var(--ease-spring);
+}
+.tool-card.is-tilting {
+    transform: perspective(800px) rotateX(var(--tiltX, 0deg)) rotateY(var(--tiltY, 0deg)) translateZ(6px);
+    border-color: color-mix(in srgb, var(--brand) 45%, var(--border));
+    box-shadow: var(--shadow-md);
+}
+.tool-card.is-tilting .tool-icon {
+    transform: translateZ(18px) translateY(-2px) scale(1.04);
+}
+.tool-card .m-card-glow {
+    position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+    background: radial-gradient(180px circle at var(--gx, 50%) var(--gy, 50%), color-mix(in srgb, var(--brand) 16%, transparent), transparent 60%);
+    opacity: 0; transition: opacity .25s ease;
+}
+.tool-card.is-tilting .m-card-glow { opacity: 1; }
+
+/* ---------- 12. Workspace depth ---------- */
+.dropzone {
+    position: relative;
+    transition: transform .3s var(--ease-spring), box-shadow .3s var(--ease-soft), border-color .3s var(--ease-soft);
+    transform-style: preserve-3d;
+}
+.dropzone::before {
+    content: ""; position: absolute; inset: 0; border-radius: inherit;
+    background: radial-gradient(120% 120% at 50% 0%, color-mix(in srgb, var(--brand) 10%, transparent), transparent 60%);
+    opacity: .8; pointer-events: none;
+}
+.dropzone.drag-over {
+    transform: perspective(900px) rotateX(6deg) translateY(-2px) scale(1.01);
+    border-color: color-mix(in srgb, var(--brand) 55%, var(--border));
+    box-shadow: var(--shadow-md), 0 0 0 4px color-mix(in srgb, var(--brand) 16%, transparent);
+}
+
+/* ---------- 13. Processing + result animation ---------- */
+.progress-bar { position: relative; overflow: hidden; }
+.progress-bar::after {
+    content: ""; position: absolute; inset: 0;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,.5), transparent);
+    transform: translateX(-100%);
+    animation: mSlide 1.4s ease-in-out infinite;
+}
+.result { position: relative; }
+.result-icon { transform: scale(0); opacity: 0; }
+.result.is-shown .result-icon { animation: mCheck .6s var(--ease-snap) forwards; }
+.result.is-shown .result-msg { animation: mFade .5s ease .15s forwards; opacity: 0; }
+.result.is-shown #download-btn { animation: mRise .5s var(--ease-soft) .25s forwards; opacity: 0; }
+
+/* ---------- 14. Header, mega menu, search, footer ---------- */
+.site-header.is-scrolled {
+    box-shadow: 0 6px 26px rgba(17,19,42,.08);
+    background: color-mix(in srgb, var(--bg) 90%, transparent);
+}
+.mega-menu {
+    opacity: 0; transform: translateY(-10px) scale(.99);
+    transform-origin: top center;
+    transition: opacity .26s var(--ease-soft), transform .26s var(--ease-soft);
+    pointer-events: none;
+}
+.mega-menu:not([hidden]) {
+    opacity: 1; transform: none; pointer-events: auto;
+}
+.mega-menu:not([hidden]) .mega-col {
+    animation: mRise .4s var(--ease-soft) backwards;
+    animation-delay: calc(var(--col-index, 0) * 45ms);
+}
+.search-modal { transform: scale(.96); opacity: 0; transition: opacity .2s ease, transform .26s var(--ease-spring); }
+.search-modal:not([hidden]) { transform: none; opacity: 1; }
+.search-panel { transform: translateY(12px); transition: transform .3s var(--ease-spring); }
+.search-modal:not([hidden]) .search-panel { transform: none; }
+
+.theme-toggle, .search-trigger, .btn, .chip, .fav-toggle {
+    transition: transform .14s var(--ease-spring), background .2s ease, border-color .2s ease, color .15s ease, box-shadow .2s ease;
+}
+.btn:active, .chip:active, .theme-toggle:active, .search-trigger:active { transform: scale(.97); }
+.btn:hover, .chip:hover { transform: translateY(-1px); }
+.fav-toggle.is-favourite .fav-star { animation: mPop .4s var(--ease-snap); }
+.brand-mark { transition: transform .3s var(--ease-spring); }
+.brand:hover .brand-mark { transform: rotate(-8deg) scale(1.06); }
+.site-footer [data-reveal="rise"] { will-change: transform, opacity; }
+
+/* ---------- 15. Keyframes ---------- */
+@keyframes mShine { 0%, 60% { transform: translateX(-120%); } 80%, 100% { transform: translateX(120%); } }
+@keyframes mDash { to { stroke-dashoffset: -120; } }
+@keyframes mScan {
+    0%   { top: 12%; opacity: 0; }
+    12%  { opacity: 1; }
+    88%  { opacity: 1; }
+    100% { top: 88%; opacity: 0; }
+}
+@keyframes mPop { to { opacity: 1; transform: scale(1); } }
+@keyframes mWave { 0%, 100% { transform: scaleY(.35); } 50% { transform: scaleY(1); } }
+@keyframes mPulse { 0%, 100% { transform: scale(1); opacity: .9; } 50% { transform: scale(1.08); opacity: 1; } }
+@keyframes mSpin { to { transform: rotate(360deg); } }
+@keyframes mSlide { to { transform: translateX(100%); } }
+@keyframes mRise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+@keyframes mFade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes mCheck {
+    0% { transform: scale(0) rotate(-15deg); opacity: 0; }
+    60% { transform: scale(1.15) rotate(4deg); opacity: 1; }
+    100% { transform: scale(1) rotate(0); opacity: 1; }
+}
+
+/* ---------- 16. Reduced motion + LITE mode ---------- */
+@media (prefers-reduced-motion: reduce) {
+    .m-card3d, .m-merge-pg, .m-bg-checker, .m-bg-card, .m-bg-mask, .m-bg-brackets,
+    .m-bc-card, .m-bc-beam, .m-bc-result, .m-qr-card, .m-qr-dl, .m-pg3d, .m-frame3d,
+    .m-vtile3d, .m-atile3d, .m-type3d, .m-core3d, .m-sat3d, .m-badge, .m-pw,
+    .m-trimbar::after, .m-wave i, .m-shield svg, .m-globe, .m-lock,
+    .m-grid-qr span, .dropzone.drag-over,
+    .result.is-shown .result-icon, .result.is-shown .result-msg,
+    .result.is-shown #download-btn, .progress-bar::after {
+        animation: none !important;
+    }
+    .m-globe { transform: none; }
+    html.motion-ready [data-reveal] { opacity: 1 !important; transform: none !important; clip-path: none !important; }
+    .tool-card.is-tilting { transform: none; box-shadow: var(--shadow-md); }
+    .m-bg-mask { transform: none; }
+    .m-bc-result, .m-qr-dl { opacity: 1; transform: translate(-50%, -50%) translateX(-50%); }
+}
+
+html.motion-lite .m-card3d,
+html.motion-lite .m-merge-pg,
+html.motion-lite .m-bg-checker,
+html.motion-lite .m-bg-card,
+html.motion-lite .m-bg-mask,
+html.motion-lite .m-bg-brackets,
+html.motion-lite .m-bc-card,
+html.motion-lite .m-bc-beam,
+html.motion-lite .m-bc-result,
+html.motion-lite .m-qr-card,
+html.motion-lite .m-qr-dl,
+html.motion-lite .m-pg3d,
+html.motion-lite .m-frame3d,
+html.motion-lite .m-vtile3d,
+html.motion-lite .m-atile3d,
+html.motion-lite .m-type3d,
+html.motion-lite .m-core3d,
+html.motion-lite .m-sat3d,
+html.motion-lite .m-wave i,
+html.motion-lite .m-shield svg,
+html.motion-lite .m-globe,
+html.motion-lite .m-lock {
+    animation: none !important;
+}
+html.motion-lite .tool-card.is-tilting { transform: translateY(-3px); }
+html.motion-touch .tool-card.is-tilting { transform: none; }

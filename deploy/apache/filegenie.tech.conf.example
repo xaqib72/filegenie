@@ -1,0 +1,14 @@
+# Enable proxy, proxy_http, headers, and rewrite modules before adding this vhost.
+# Add alongside the existing site's vhost; do not replace its configuration.
+<VirtualHost *:80>
+    ServerName filegenie.tech
+    ServerAlias www.filegenie.tech
+    ProxyPreserveHost On
+    RequestHeader set X-Real-IP "%{REMOTE_ADDR}s"
+    RequestHeader set X-Forwarded-For "%{REMOTE_ADDR}s"
+    RequestHeader set X-Forwarded-Proto "http"
+    ProxyPass / http://127.0.0.1:8082/ connectiontimeout=5 timeout=120
+    ProxyPassReverse / http://127.0.0.1:8082/
+    ErrorLog ${APACHE_LOG_DIR}/filegenie-error.log
+    CustomLog ${APACHE_LOG_DIR}/filegenie-access.log combined
+</VirtualHost>

@@ -1,0 +1,13 @@
+.env
+.env.*
+!.env.example
+node_modules/
+tmp/
+storage/
+.claude/
+tests/evidence/
+*.log
+*.zip
+*.tar.gz
+
+tests/_ffout/

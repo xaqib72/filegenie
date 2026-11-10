@@ -1,0 +1,12 @@
+services:
+  filegenie:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "127.0.0.1:${FILEGENIE_PORT:-8082}:80"
+    environment:
+      FILEGENIE_BASE_URL: ${FILEGENIE_BASE_URL:-https://filegenie.tech}
+      FILEGENIE_TRUSTED_PROXIES: ${FILEGENIE_TRUSTED_PROXIES:-}
+      FILEGENIE_GOOGLE_TAG_ID: ${FILEGENIE_GOOGLE_TAG_ID:-${FILEGENIE_GA_MEASUREMENT_ID:-}}
+    restart: unless-stopped

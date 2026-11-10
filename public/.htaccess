@@ -1,0 +1,62 @@
+# FileGenie — Apache configuration for shared hosting (PHP 8.1+).
+# This file is also copied to the root of FileGenie-Hostinger-Ready.zip.
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteBase /
+
+    # Never expose development/private trees when this file is used at the
+    # flattened document root. These rules run before the real-file shortcut.
+    RewriteRule ^(?:app|config|scripts|storage|tests|node_modules|tmp|\.claude)(?:/|$) - [F,L,NC]
+    RewriteRule ^(?:\.env(?:\..*)?|composer\.(?:json|lock)|package(?:-lock)?\.json|.*\.(?:log|sql|bak|dist))$ - [F,L,NC]
+
+    # Generate SEO endpoints through the configured base URL, even when a
+    # stale static copy is present in the document root.
+    RewriteRule ^(?:robots\.txt|sitemap\.xml)$ index.php [L,NC]
+
+    # Skip intended public files/directories.
+    RewriteCond %{REQUEST_FILENAME} -f [OR]
+    RewriteCond %{REQUEST_FILENAME} -d
+    RewriteRule ^ - [L]
+
+    # Route everything else to the front controller.
+    RewriteRule ^ index.php [L]
+</IfModule>
+
+# Security headers.
+<IfModule mod_headers.c>
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set X-Frame-Options "SAMEORIGIN"
+    Header always set X-XSS-Protection "1; mode=block"
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+    Header always set Permissions-Policy "camera=(), microphone=(), geolocation=()"
+</IfModule>
+
+# Prevent direct access to hidden files and common source/config files.
+<FilesMatch "^\.|^(?:composer|package)(?:-lock)?\.json$|^(?:bootstrap|config|app|storage|scripts)\.php$|\.(?:log|sql|bak|dist)$">
+    Require all denied
+</FilesMatch>
+
+# Disable directory listing.
+Options -Indexes
+
+# Compression — gzip (always) + Brotli (if available).
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/html text/css text/javascript application/javascript application/json image/svg+xml
+</IfModule>
+<IfModule mod_brotli.c>
+    AddOutputFilterByType BROTLI_COMPRESS text/html text/css text/javascript application/javascript application/json image/svg+xml
+</IfModule>
+
+# Cache static assets.
+<IfModule mod_expires.c>
+    ExpiresActive On
+    ExpiresByType image/svg+xml "access plus 1 month"
+    ExpiresByType text/css "access plus 1 week"
+    ExpiresByType application/javascript "access plus 1 week"
+</IfModule>
+
+# Browser engines are fetched as same-origin runtime assets.
+AddType application/wasm .wasm
+AddType text/javascript .mjs
+AddType application/octet-stream .onnx .traineddata .gz

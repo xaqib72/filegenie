@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /contact/send
+Sitemap: https://filegenie.tech/sitemap.xml
