@@ -33,8 +33,10 @@ $ogImage = $ogOrigin !== '' ? $ogOrigin . '/og.png' : '';
     <?php if ($ogImage !== ''): ?><meta property="og:image" content="<?= htmlspecialchars($ogImage, ENT_QUOTES, 'UTF-8') ?>"><?php endif; ?>
     <meta name="twitter:card" content="summary_large_image">
     <?php if ($ogImage !== ''): ?><meta name="twitter:image" content="<?= htmlspecialchars($ogImage, ENT_QUOTES, 'UTF-8') ?>"><?php endif; ?>
+    <link rel="icon" type="image/png" sizes="96x96" href="/favicon.png?v=1">
     <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=2">
-    <link rel="shortcut icon" type="image/svg+xml" href="/favicon.svg?v=2">
+    <link rel="shortcut icon" type="image/png" href="/favicon.png?v=1">
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png?v=1">
     <link rel="manifest" href="/manifest.webmanifest">
     <script>
         (function () {
